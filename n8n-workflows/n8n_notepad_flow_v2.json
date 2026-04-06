@@ -1,0 +1,134 @@
+[
+  {
+    "name": "Smart Notepad v2",
+    "nodes": [
+      {
+        "parameters": {
+          "updates": [
+            "message"
+          ]
+        },
+        "id": "tg_trigger",
+        "name": "Telegram Trigger",
+        "type": "n8n-nodes-base.telegramTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          200,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "model": "llama3.2:3b",
+          "options": {}
+        },
+        "id": "ollama_model",
+        "name": "Ollama Chat Model",
+        "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+        "typeVersion": 1,
+        "position": [
+          400,
+          400
+        ]
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "={{ $json.message.text }}",
+          "options": {
+            "systemMessage": "Ты — эксперт по анализу текста. Твоя задача: проанализировать входящее сообщение и извлечь 3-5 ключевых тегов, отражающих суть. Темы: поставщики, закупки, логистика, оборудование, важные заметки. Ответ должен содержать ТОЛЬКО список тегов через запятую, без лишнего текста, без символа #, в нижнем регистре. Пример: логистика, электроника, закупка"
+          }
+        },
+        "id": "ai_chain",
+        "name": "Basic LLM Chain",
+        "type": "@n8n/n8n-nodes-langchain.chainLlm",
+        "typeVersion": 1.4,
+        "position": [
+          450,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://stack-wordpress-1/wp-json/sn/v1/add-note",
+          "sendBody": true,
+          "specifyBody": "fields",
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "content",
+                "value": "={{ $('Telegram Trigger').item.json.message.text }}"
+              },
+              {
+                "name": "tags",
+                "value": "={{ $json.output.split(',').map(s => s.trim()) }}"
+              }
+            ]
+          },
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-API-KEY",
+                "value": "SUPER_SECRET_TOKEN_2026"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "wp_request",
+        "name": "HTTP: Send to WP",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          700,
+          200
+        ]
+      }
+    ],
+    "connections": {
+      "Telegram Trigger": {
+        "main": [
+          [
+            {
+              "node": "Basic LLM Chain",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Ollama Chat Model": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "Basic LLM Chain",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Basic LLM Chain": {
+        "main": [
+          [
+            {
+              "node": "HTTP: Send to WP",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null,
+    "meta": {
+      "templateCredsSetupCompleted": true
+    },
+    "active": false,
+    "versionId": "notepad-v2"
+  }
+]

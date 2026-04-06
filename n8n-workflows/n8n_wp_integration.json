@@ -1,0 +1,88 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "tg-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        250,
+        300
+      ],
+      "webhookId": "tg-summarizer-wp"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://flowise:3000/api/v1/prediction/743a99a4-4416-4d73-8d30-e769af336d61",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ question: $node[\"Format Data\"].json.text }) }}",
+        "options": {}
+      },
+      "id": "flowise-node",
+      "name": "Flowise: Summarizer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "postType": "posts",
+        "title": "=ИИ-Анализ: {{ $node[\"Telegram Trigger\"].json.message.date }}",
+        "content": "={{ $json.text }}",
+        "status": "draft",
+        "additionalFields": {
+          "author": 1
+        }
+      },
+      "id": "wp-node",
+      "name": "WordPress: Create Draft",
+      "type": "n8n-nodes-base.wordpress",
+      "typeVersion": 1,
+      "position": [
+        850,
+        300
+      ],
+      "credentials": {
+        "wordpressApi": {
+          "id": "WP_CRED_ID",
+          "name": "My WordPress Site"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Flowise: Summarizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flowise: Summarizer": {
+      "main": [
+        [
+          {
+            "node": "WordPress: Create Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

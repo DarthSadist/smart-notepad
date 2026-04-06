@@ -1,0 +1,99 @@
+{
+  "name": "Smart Notepad Telegram to WP",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ]
+      },
+      "id": "telegram_trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [
+        200,
+        200
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TG_BOT_ID",
+          "name": "My Notepad Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "llama3.2:latest",
+        "prompt": "Analyze this note and provide 3-5 keywords as a JSON array of strings. Only return the JSON. Text: {{ $json.message.text }}",
+        "format": "json"
+      },
+      "id": "ollama_tagger",
+      "name": "Ollama Tagger",
+      "type": "n8n-nodes-base.ollama",
+      "typeVersion": 1,
+      "position": [
+        450,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://stack-wordpress-1/wp-json/sn/v1/add-note",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-KEY",
+              "value": "SUPER_SECRET_TOKEN_2026"
+            }
+          ]
+        },
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $node[\"Telegram Trigger\"].json.message.text }}"
+            },
+            {
+              "name": "tags",
+              "value": "={{ $node[\"Ollama Tagger\"].json.output }}"
+            }
+          ]
+        }
+      },
+      "id": "wp_sender",
+      "name": "Send to WP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        700,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Ollama Tagger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Tagger": {
+      "main": [
+        [
+          {
+            "node": "Send to WP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
